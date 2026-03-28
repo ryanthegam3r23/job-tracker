@@ -1,9 +1,10 @@
 from rest_framework import serializers
-from .models import JobApplication
+from .models import Application
 
-class JobApplicationSerializer(serializers.ModelSerializer):
+class ApplicationSerializer(serializers.ModelSerializer):
     class Meta:
-        model = JobApplication
-        fields = "__all__"
+        model = Application
+        fields = ['id', 'company', 'position', 'status', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 

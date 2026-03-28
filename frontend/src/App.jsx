@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useAuth } from "./AuthContext";
+import LoginPage from "./LoginPage";
 
 import {
   PieChart,
@@ -10,6 +12,7 @@ import {
 } from "recharts";
 
 function App() {
+  const { token, logout } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [company, setCompany] = useState("");
   const [position, setPosition] = useState("");
@@ -29,8 +32,8 @@ function App() {
   };
 
   useEffect(() => {
-    fetchJobs();
-  }, []);
+    if (token) fetchJobs();
+  }, [token]);
 
   // CREATE
   const handleCreate = async () => {
@@ -40,9 +43,7 @@ function App() {
         position,
         status,
       });
-
       setJobs([...jobs, res.data]);
-
       setCompany("");
       setPosition("");
       setStatus("applied");
@@ -77,13 +78,11 @@ function App() {
         position,
         status,
       });
-
       setJobs(
         jobs.map((job) =>
           job.id === editingJob.id ? res.data : job
         )
       );
-
       setEditingJob(null);
       setCompany("");
       setPosition("");
@@ -116,22 +115,21 @@ function App() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "applied":
-        return "#3b82f6";
-      case "interview":
-        return "#f59e0b";
-      case "offer":
-        return "#22c55e";
-      case "rejected":
-        return "#ef4444";
-      default:
-        return "#999";
+      case "applied": return "#3b82f6";
+      case "interview": return "#f59e0b";
+      case "offer": return "#22c55e";
+      case "rejected": return "#ef4444";
+      default: return "#999";
     }
   };
+
+  if (!token) return <LoginPage />;
 
   return (
     <div style={styles.page}>
       <h1 style={styles.title}>💼 Job Tracker Dashboard</h1>
+
+      <button onClick={logout} style={styles.logoutBtn}>Log Out</button>
 
       {/* STATS */}
       <div style={styles.statsGrid}>
@@ -139,22 +137,18 @@ function App() {
           <h3>Total</h3>
           <p>{stats.total}</p>
         </div>
-
         <div style={styles.statCard}>
           <h3>Applied</h3>
           <p style={{ color: "#3b82f6" }}>{stats.applied}</p>
         </div>
-
         <div style={styles.statCard}>
           <h3>Interview</h3>
           <p style={{ color: "#f59e0b" }}>{stats.interview}</p>
         </div>
-
         <div style={styles.statCard}>
           <h3>Offer</h3>
           <p style={{ color: "#22c55e" }}>{stats.offer}</p>
         </div>
-
         <div style={styles.statCard}>
           <h3>Rejected</h3>
           <p style={{ color: "#ef4444" }}>{stats.rejected}</p>
@@ -164,7 +158,6 @@ function App() {
       {/* CHART */}
       <div style={styles.chartContainer}>
         <h2 style={{ textAlign: "center" }}>Status Breakdown</h2>
-
         <div style={{ display: "flex", justifyContent: "center" }}>
           <PieChart width={320} height={320}>
             <Pie
@@ -180,7 +173,6 @@ function App() {
                 <Cell key={index} fill={COLORS[index]} />
               ))}
             </Pie>
-
             <Tooltip />
             <Legend />
           </PieChart>
@@ -195,14 +187,12 @@ function App() {
           value={company}
           onChange={(e) => setCompany(e.target.value)}
         />
-
         <input
           style={styles.input}
           placeholder="Position"
           value={position}
           onChange={(e) => setPosition(e.target.value)}
         />
-
         <select
           style={styles.input}
           value={status}
@@ -213,7 +203,6 @@ function App() {
           <option value="offer">Offer</option>
           <option value="rejected">Rejected</option>
         </select>
-
         <button
           style={styles.primaryBtn}
           onClick={editingJob ? handleUpdate : handleCreate}
@@ -228,7 +217,6 @@ function App() {
           <div key={job.id} style={styles.card}>
             <div style={styles.cardTop}>
               <h3 style={{ margin: 0 }}>{job.company}</h3>
-
               <span
                 style={{
                   ...styles.badge,
@@ -238,14 +226,11 @@ function App() {
                 {job.status}
               </span>
             </div>
-
             <p style={{ color: "#555" }}>{job.position}</p>
-
             <div style={styles.actions}>
               <button style={styles.editBtn} onClick={() => startEdit(job)}>
                 Edit
               </button>
-
               <button
                 style={styles.deleteBtn}
                 onClick={() => handleDelete(job.id)}
@@ -271,12 +256,20 @@ const styles = {
     background: "#f6f7fb",
     minHeight: "100vh",
   },
-
   title: {
     textAlign: "center",
     marginBottom: 20,
   },
-
+  logoutBtn: {
+    display: "block",
+    margin: "0 auto 16px",
+    padding: "8px 20px",
+    borderRadius: 8,
+    border: "none",
+    background: "#ef4444",
+    color: "white",
+    cursor: "pointer",
+  },
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
@@ -284,7 +277,6 @@ const styles = {
     maxWidth: 900,
     margin: "0 auto 20px",
   },
-
   statCard: {
     background: "white",
     padding: 12,
@@ -292,7 +284,6 @@ const styles = {
     textAlign: "center",
     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   },
-
   chartContainer: {
     marginTop: 20,
     background: "white",
@@ -303,7 +294,6 @@ const styles = {
     marginLeft: "auto",
     marginRight: "auto",
   },
-
   formCard: {
     maxWidth: 500,
     margin: "20px auto",
@@ -315,13 +305,11 @@ const styles = {
     flexDirection: "column",
     gap: 10,
   },
-
   input: {
     padding: 10,
     borderRadius: 8,
     border: "1px solid #ddd",
   },
-
   primaryBtn: {
     padding: 10,
     borderRadius: 8,
@@ -331,40 +319,34 @@ const styles = {
     cursor: "pointer",
     fontWeight: "bold",
   },
-
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
     gap: 15,
     marginTop: 20,
   },
-
   card: {
     background: "white",
     padding: 15,
     borderRadius: 12,
     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
   },
-
   cardTop: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   badge: {
     padding: "4px 8px",
     borderRadius: 999,
     color: "white",
     fontSize: 12,
   },
-
   actions: {
     display: "flex",
     gap: 8,
     marginTop: 10,
   },
-
   editBtn: {
     flex: 1,
     padding: 6,
@@ -374,7 +356,6 @@ const styles = {
     color: "white",
     cursor: "pointer",
   },
-
   deleteBtn: {
     flex: 1,
     padding: 6,
@@ -387,8 +368,6 @@ const styles = {
 };
 
 export default App;
-
-
 
 
 
