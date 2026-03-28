@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "./AuthContext";
 import LoginPage from "./LoginPage";
-
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 function App() {
   const { token, logout } = useAuth();
@@ -18,10 +11,10 @@ function App() {
   const [position, setPosition] = useState("");
   const [status, setStatus] = useState("applied");
   const [editingJob, setEditingJob] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   const API_URL = "http://127.0.0.1:8000/api/applications/";
 
-  // GET JOBS
   const fetchJobs = async () => {
     try {
       const res = await axios.get(API_URL);
@@ -35,66 +28,45 @@ function App() {
     if (token) fetchJobs();
   }, [token]);
 
-  // CREATE
   const handleCreate = async () => {
     try {
-      const res = await axios.post(API_URL, {
-        company,
-        position,
-        status,
-      });
+      const res = await axios.post(API_URL, { company, position, status });
       setJobs([...jobs, res.data]);
-      setCompany("");
-      setPosition("");
-      setStatus("applied");
-    } catch (err) {
-      console.log(err.response?.data);
-    }
+      setCompany(""); setPosition(""); setStatus("applied");
+      setShowForm(false);
+    } catch (err) { console.log(err.response?.data); }
   };
 
-  // DELETE
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${API_URL}${id}/`);
       setJobs(jobs.filter((job) => job.id !== id));
-    } catch (err) {
-      console.log(err.response?.data);
-    }
+    } catch (err) { console.log(err.response?.data); }
   };
 
-  // START EDIT
   const startEdit = (job) => {
     setEditingJob(job);
     setCompany(job.company);
     setPosition(job.position);
     setStatus(job.status);
+    setShowForm(true);
   };
 
-  // UPDATE
   const handleUpdate = async () => {
     try {
-      const res = await axios.put(`${API_URL}${editingJob.id}/`, {
-        company,
-        position,
-        status,
-      });
-      setJobs(
-        jobs.map((job) =>
-          job.id === editingJob.id ? res.data : job
-        )
-      );
+      const res = await axios.put(`${API_URL}${editingJob.id}/`, { company, position, status });
+      setJobs(jobs.map((job) => job.id === editingJob.id ? res.data : job));
       setEditingJob(null);
-      setCompany("");
-      setPosition("");
-      setStatus("applied");
-    } catch (err) {
-      console.log(err.response?.data);
-    }
+      setCompany(""); setPosition(""); setStatus("applied");
+      setShowForm(false);
+    } catch (err) { console.log(err.response?.data); }
   };
 
-  // =========================
-  // 📊 ANALYTICS
-  // =========================
+  const cancelForm = () => {
+    setEditingJob(null);
+    setCompany(""); setPosition(""); setStatus("applied");
+    setShowForm(false);
+  };
 
   const stats = {
     total: jobs.length,
@@ -109,261 +81,217 @@ function App() {
     { name: "Interview", value: stats.interview },
     { name: "Offer", value: stats.offer },
     { name: "Rejected", value: stats.rejected },
-  ];
+  ].filter(d => d.value > 0);
 
-  const COLORS = ["#3b82f6", "#f59e0b", "#22c55e", "#ef4444"];
+ const COLORS = {
+  Applied: "#3b82f6",
+  Interview: "#f59e0b",
+  Offer: "#22c55e",
+  Rejected: "#ef4444",
+};
+  const statusColor = (s) => ({
+    applied: "#3b82f6", interview: "#f59e0b", offer: "#22c55e", rejected: "#ef4444"
+  }[s] || "#999");
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "applied": return "#3b82f6";
-      case "interview": return "#f59e0b";
-      case "offer": return "#22c55e";
-      case "rejected": return "#ef4444";
-      default: return "#999";
-    }
-  };
+  const statusBg = (s) => ({
+    applied: "#eff6ff", interview: "#fffbeb", offer: "#f0fdf4", rejected: "#fef2f2"
+  }[s] || "#f9fafb");
 
   if (!token) return <LoginPage />;
 
   return (
-    <div style={styles.page}>
-      <h1 style={styles.title}>💼 Job Tracker Dashboard</h1>
+    <div style={s.page}>
 
-      <button onClick={logout} style={styles.logoutBtn}>Log Out</button>
-
-      {/* STATS */}
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <h3>Total</h3>
-          <p>{stats.total}</p>
+      {/* HEADER */}
+      <div style={s.header}>
+        <div style={s.headerLeft}>
+          <span style={{ fontSize: 22 }}>💼</span>
+          <span style={s.headerTitle}>Job Tracker</span>
         </div>
-        <div style={styles.statCard}>
-          <h3>Applied</h3>
-          <p style={{ color: "#3b82f6" }}>{stats.applied}</p>
-        </div>
-        <div style={styles.statCard}>
-          <h3>Interview</h3>
-          <p style={{ color: "#f59e0b" }}>{stats.interview}</p>
-        </div>
-        <div style={styles.statCard}>
-          <h3>Offer</h3>
-          <p style={{ color: "#22c55e" }}>{stats.offer}</p>
-        </div>
-        <div style={styles.statCard}>
-          <h3>Rejected</h3>
-          <p style={{ color: "#ef4444" }}>{stats.rejected}</p>
-        </div>
+        <button style={s.logoutBtn} onClick={logout}>Sign out</button>
       </div>
 
-      {/* CHART */}
-      <div style={styles.chartContainer}>
-        <h2 style={{ textAlign: "center" }}>Status Breakdown</h2>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <PieChart width={320} height={320}>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={120}
-              label
-            >
-              {chartData.map((_, index) => (
-                <Cell key={index} fill={COLORS[index]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        </div>
-      </div>
+      <div style={s.content}>
 
-      {/* FORM */}
-      <div style={styles.formCard}>
-        <input
-          style={styles.input}
-          placeholder="Company"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-        />
-        <input
-          style={styles.input}
-          placeholder="Position"
-          value={position}
-          onChange={(e) => setPosition(e.target.value)}
-        />
-        <select
-          style={styles.input}
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="applied">Applied</option>
-          <option value="interview">Interview</option>
-          <option value="offer">Offer</option>
-          <option value="rejected">Rejected</option>
-        </select>
-        <button
-          style={styles.primaryBtn}
-          onClick={editingJob ? handleUpdate : handleCreate}
-        >
-          {editingJob ? "Update Job" : "Add Job"}
-        </button>
-      </div>
-
-      {/* JOB LIST */}
-      <div style={styles.grid}>
-        {jobs.map((job) => (
-          <div key={job.id} style={styles.card}>
-            <div style={styles.cardTop}>
-              <h3 style={{ margin: 0 }}>{job.company}</h3>
-              <span
-                style={{
-                  ...styles.badge,
-                  background: getStatusColor(job.status),
-                }}
-              >
-                {job.status}
-              </span>
+        {/* STAT CARDS */}
+        <div style={s.statsGrid}>
+          {[
+            { label: "Total", value: stats.total, color: "#111" },
+            { label: "Applied", value: stats.applied, color: "#3b82f6" },
+            { label: "Interview", value: stats.interview, color: "#f59e0b" },
+            { label: "Offer", value: stats.offer, color: "#22c55e" },
+            { label: "Rejected", value: stats.rejected, color: "#ef4444" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={s.statCard}>
+              <p style={s.statLabel}>{label}</p>
+              <p style={{ ...s.statValue, color }}>{value}</p>
             </div>
-            <p style={{ color: "#555" }}>{job.position}</p>
-            <div style={styles.actions}>
-              <button style={styles.editBtn} onClick={() => startEdit(job)}>
-                Edit
-              </button>
-              <button
-                style={styles.deleteBtn}
-                onClick={() => handleDelete(job.id)}
-              >
-                Delete
+          ))}
+        </div>
+
+        {/* CHART */}
+        {chartData.length > 0 && (
+          <div style={s.card}>
+            <p style={s.sectionTitle}>Status breakdown</p>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
+                  {chartData.map((entry, i) => <Cell key={i} fill={COLORS[entry.name]} />)}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* ADD JOB BUTTON */}
+        {!showForm && (
+          <button style={s.addBtn} onClick={() => setShowForm(true)}>
+            + Add job
+          </button>
+        )}
+
+        {/* FORM */}
+        {showForm && (
+          <div style={s.card}>
+            <p style={s.sectionTitle}>{editingJob ? "Edit job" : "Add a new job"}</p>
+            <input
+              style={s.input}
+              placeholder="Company"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+            />
+            <input
+              style={s.input}
+              placeholder="Position"
+              value={position}
+              onChange={(e) => setPosition(e.target.value)}
+            />
+            <select style={s.input} value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <div style={s.formActions}>
+              <button style={s.cancelBtn} onClick={cancelForm}>Cancel</button>
+              <button style={s.primaryBtn} onClick={editingJob ? handleUpdate : handleCreate}>
+                {editingJob ? "Save changes" : "Add job"}
               </button>
             </div>
           </div>
-        ))}
+        )}
+
+        {/* JOB LIST */}
+        <div style={s.jobList}>
+          {jobs.length === 0 && (
+            <div style={s.emptyState}>
+              <p style={{ fontSize: 32, margin: 0 }}>📋</p>
+              <p style={{ color: "#888", marginTop: 8 }}>No jobs yet. Add your first one!</p>
+            </div>
+          )}
+          {jobs.map((job) => (
+            <div key={job.id} style={s.jobCard}>
+              <div style={s.jobTop}>
+                <div>
+                  <p style={s.jobCompany}>{job.company}</p>
+                  <p style={s.jobPosition}>{job.position}</p>
+                </div>
+                <span style={{ ...s.badge, color: statusColor(job.status), background: statusBg(job.status) }}>
+                  {job.status}
+                </span>
+              </div>
+              <div style={s.jobActions}>
+                <button style={s.editBtn} onClick={() => startEdit(job)}>Edit</button>
+                <button style={s.deleteBtn} onClick={() => handleDelete(job.id)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );
 }
 
-// =========================
-// 🎨 STYLES
-// =========================
-
-const styles = {
-  page: {
-    padding: 20,
-    fontFamily: "Arial",
-    background: "#f6f7fb",
-    minHeight: "100vh",
+const s = {
+  page: { background: "#f6f7fb", minHeight: "100vh", fontFamily: "Arial, sans-serif" },
+  header: {
+    background: "white",
+    borderBottom: "1px solid #e5e7eb",
+    padding: "14px 20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
   },
-  title: {
-    textAlign: "center",
-    marginBottom: 20,
-  },
+  headerLeft: { display: "flex", alignItems: "center", gap: 8 },
+  headerTitle: { fontSize: 17, fontWeight: 700, color: "#111" },
   logoutBtn: {
-    display: "block",
-    margin: "0 auto 16px",
-    padding: "8px 20px",
-    borderRadius: 8,
-    border: "none",
-    background: "#ef4444",
-    color: "white",
-    cursor: "pointer",
+    padding: "7px 14px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+    background: "white", color: "#555", fontSize: 13, cursor: "pointer",
   },
+  content: { maxWidth: 680, margin: "0 auto", padding: "20px 16px", boxSizing: "border-box" },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
     gap: 10,
-    maxWidth: 900,
-    margin: "0 auto 20px",
+    marginBottom: 16,
   },
   statCard: {
-    background: "white",
-    padding: 12,
-    borderRadius: 10,
-    textAlign: "center",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+    background: "white", borderRadius: 12, padding: "12px 10px",
+    textAlign: "center", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
   },
-  chartContainer: {
-    marginTop: 20,
-    background: "white",
-    padding: 20,
-    borderRadius: 12,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-    maxWidth: 600,
-    marginLeft: "auto",
-    marginRight: "auto",
+  statLabel: { margin: 0, fontSize: 12, color: "#888", marginBottom: 4 },
+  statValue: { margin: 0, fontSize: 22, fontWeight: 700 },
+  card: {
+    background: "white", borderRadius: 14, padding: "18px 16px",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.05)", marginBottom: 16,
   },
-  formCard: {
-    maxWidth: 500,
-    margin: "20px auto",
-    background: "white",
-    padding: 20,
-    borderRadius: 12,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
+  sectionTitle: { margin: "0 0 14px", fontSize: 15, fontWeight: 600, color: "#111" },
+  addBtn: {
+    width: "100%", padding: "13px", borderRadius: 12, border: "2px dashed #d1d5db",
+    background: "white", color: "#3b82f6", fontSize: 15, fontWeight: 600,
+    cursor: "pointer", marginBottom: 16,
   },
   input: {
-    padding: 10,
-    borderRadius: 8,
-    border: "1px solid #ddd",
+    display: "block", width: "100%", padding: "11px 13px", borderRadius: 10,
+    border: "1.5px solid #e5e7eb", fontSize: 15, marginBottom: 10,
+    boxSizing: "border-box", outline: "none",
+  },
+  formActions: { display: "flex", gap: 10, marginTop: 4 },
+  cancelBtn: {
+    flex: 1, padding: 11, borderRadius: 10, border: "1.5px solid #e5e7eb",
+    background: "white", color: "#555", fontSize: 14, cursor: "pointer",
   },
   primaryBtn: {
-    padding: 10,
-    borderRadius: 8,
-    border: "none",
-    background: "#3b82f6",
-    color: "white",
-    cursor: "pointer",
-    fontWeight: "bold",
+    flex: 2, padding: 11, borderRadius: 10, border: "none",
+    background: "#3b82f6", color: "white", fontSize: 14, fontWeight: 600, cursor: "pointer",
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: 15,
-    marginTop: 20,
+  jobList: { display: "flex", flexDirection: "column", gap: 10 },
+  emptyState: { textAlign: "center", padding: "40px 0" },
+  jobCard: {
+    background: "white", borderRadius: 14, padding: "14px 16px",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
   },
-  card: {
-    background: "white",
-    padding: 15,
-    borderRadius: 12,
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-  },
-  cardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+  jobTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
+  jobCompany: { margin: 0, fontSize: 16, fontWeight: 600, color: "#111" },
+  jobPosition: { margin: "3px 0 0", fontSize: 14, color: "#666" },
   badge: {
-    padding: "4px 8px",
-    borderRadius: 999,
-    color: "white",
-    fontSize: 12,
+    padding: "4px 10px", borderRadius: 999, fontSize: 12,
+    fontWeight: 600, whiteSpace: "nowrap",
   },
-  actions: {
-    display: "flex",
-    gap: 8,
-    marginTop: 10,
-  },
+  jobActions: { display: "flex", gap: 8 },
   editBtn: {
-    flex: 1,
-    padding: 6,
-    borderRadius: 6,
-    border: "none",
-    background: "#f59e0b",
-    color: "white",
-    cursor: "pointer",
+    flex: 1, padding: "8px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+    background: "white", color: "#f59e0b", fontSize: 13, fontWeight: 600, cursor: "pointer",
   },
   deleteBtn: {
-    flex: 1,
-    padding: 6,
-    borderRadius: 6,
-    border: "none",
-    background: "#ef4444",
-    color: "white",
-    cursor: "pointer",
+    flex: 1, padding: "8px", borderRadius: 8, border: "1.5px solid #fecaca",
+    background: "#fef2f2", color: "#ef4444", fontSize: 13, fontWeight: 600, cursor: "pointer",
   },
 };
 
