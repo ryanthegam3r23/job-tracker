@@ -108,4 +108,7 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 ).split(' ')
 CORS_ALLOW_ALL_ORIGINS = False
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(' ')
+CSRF_TRUSTED_ORIGINS = [
+    'https://job-tracker-production-d998.up.railway.app',
+    os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000'),
+]
