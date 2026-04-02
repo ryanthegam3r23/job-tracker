@@ -13,7 +13,7 @@ function App() {
   const [editingJob, setEditingJob] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  const API_URL = "http://127.0.0.1:8000/api/applications/";
+  const API_URL = `${import.meta.env.VITE_API_URL || "http://127.0.0.1:8000"}/api/applications/`;
 
   const fetchJobs = async () => {
     try {
